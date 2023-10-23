@@ -28,10 +28,29 @@ def _extract_snntorch_module(module: torch.nn.Module) -> Optional[nir.NIRNode]:
         beta = module.beta.detach().numpy()
         vthr = module.threshold.detach().numpy()
 
+        # infer shape
+        shape = None
+        for arg in (alpha, beta, vthr):
+            if len(arg.shape) >= 1:
+                if shape is not None:
+                    assert arg.shape == shape, "shape of all Synaptic variable"
+                    " (alpha, beta, threshold) has to be equal"
+                else:
+                    shape = arg.shape
+
+        # set shape to (7,) for RNN model (FIXME)
+        if shape == None:
+            print("WARNING: setting shape of Synaptic layer to (7,) for Braille"
+                    " RNN (FIXME)")
+            shape = (7,)
+
         # TODO: make sure alpha, beta, vthr are tensors of same size
-        alpha = np.ones(7) * alpha
-        beta = np.ones(7) * beta
-        vthr = np.ones(7) * vthr
+        if len(alpha.shape) == 0:
+            alpha = np.ones(shape) * alpha
+        if len(beta.shape) == 0:
+            beta = np.ones(shape) * beta
+        if len(vthr.shape) == 0:
+            vthr = np.ones(shape) * vthr
 
         tau_syn = dt / (1 - alpha)
         tau_mem = dt / (1 - beta)
